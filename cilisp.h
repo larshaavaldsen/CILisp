@@ -52,6 +52,7 @@ FUNC_TYPE resolveFunc(char *);
 typedef enum num_type {
     INT_TYPE,
     DOUBLE_TYPE,
+    NO_TYPE
 } NUM_TYPE;
 
 
@@ -101,6 +102,7 @@ typedef struct symbol_table_node {
     char *id;
     AST_NODE *value;
     struct symbol_table_node *next;
+    NUM_TYPE type;
 } SYMBOL_TABLE_NODE;
 
 AST_NODE *createNumberNode(double value, NUM_TYPE type);
@@ -110,6 +112,7 @@ AST_NODE *createSymbolNode(char *id);
 SYMBOL_TABLE_NODE *createSymbol(char *id, AST_NODE *value);
 AST_NODE *createScopeNode(SYMBOL_TABLE_NODE *symbolTable, AST_NODE *child);
 SYMBOL_TABLE_NODE *addSymbolToTable(SYMBOL_TABLE_NODE *new, SYMBOL_TABLE_NODE *table);
+SYMBOL_TABLE_NODE *createTypedSymbol(char *id, AST_NODE *value, bool type);
 
 RET_VAL eval(AST_NODE *node);
 

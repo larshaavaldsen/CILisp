@@ -16,7 +16,7 @@
 %token <ival> FUNC
 %token <dval> INT DOUBLE
 %token <sval> SYMBOL
-%token QUIT EOL EOFT LPAREN RPAREN LET
+%token QUIT EOL EOFT LPAREN RPAREN LET INT_TYPECAST DOUBLE_TYPECAST
 
 %type <astNode> s_expr number f_expr s_expr_section s_expr_list
 %type <symTNode> let_section let_elem let_list
@@ -99,9 +99,6 @@ s_expr:
     } | LPAREN let_section s_expr RPAREN {
         ylog(s_expr, LPAREN let_section s_expr RPAREN);
         $$ = createScopeNode($2, $3);
-        if($$->symbolTable == NULL) {
-            printf("NULL!");
-        }
     };
 
     let_section:
@@ -123,6 +120,12 @@ s_expr:
         LPAREN SYMBOL s_expr RPAREN {
             ylog(let_elem, LPAREN SYMBOL s_expr RPAREN);
             $$ = createSymbol($2, $3);
+        } | LPAREN INT_TYPECAST SYMBOL s_expr RPAREN {
+            ylog(let_elem, LPAREN INT_TYPECAST SYMBOL s_expr RPAREN);
+            $$ = createTypedSymbol($3, $4, true);
+        } | LPAREN DOUBLE_TYPECAST SYMBOL s_expr RPAREN{
+            ylog(let_elem, LPAREN DOUBLE_TYPECAST SYMBOL s_expr RPAREN);
+            $$ = createTypedSymbol($3, $4, false);
         };
 
 %%

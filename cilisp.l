@@ -34,6 +34,16 @@ func "neg"|"abs"|"add"|"sub"|"mult"|"div"|"remainder"|"exp"|"exp2"|"pow"|"log"|"
     return QUIT;
 }
 
+"int" {
+    llog(INT_TYPECAST);
+    return INT_TYPECAST;
+}
+
+"double" {
+    llog(DOUBLE_TYPECAST);
+    return DOUBLE_TYPECAST;
+}
+
 "exit" {
     return QUIT;
 }

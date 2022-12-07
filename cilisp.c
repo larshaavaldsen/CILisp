@@ -190,6 +190,38 @@ SYMBOL_TABLE_NODE *createSymbol(char *id, AST_NODE *value) {
     node->value = value;
     node->next = NULL;
 
+    node->type = NO_TYPE;
+
+    return node;
+}
+
+SYMBOL_TABLE_NODE *createTypedSymbol(char *id, AST_NODE *value, bool type) {
+    SYMBOL_TABLE_NODE *node;
+    size_t nodeSize;
+
+    nodeSize = sizeof(AST_NODE);
+    if ((node = calloc(nodeSize, 1)) == NULL)
+    {
+        yyerror("Memory allocation failed!");
+        exit(1);
+    }
+
+    if(id != NULL) {
+        node->id = strdup(id);
+        free(id);
+    }
+    else
+        node->id = NULL;
+    node->value = value;
+    node->next = NULL;
+
+    if (type) {
+        node->type = INT_TYPE;
+    } else {
+        node->type = DOUBLE_TYPE;
+    }
+
+
     return node;
 }
 
@@ -259,6 +291,8 @@ RET_VAL evalAdd(AST_NODE *oplist) {
     RET_VAL result;
     result.value = 0;
 
+    bool trackDouble = false;
+
     if(oplist == NULL) {
         warning("add called with no operands, 0 returned");
         return ZERO_RET_VAL;
@@ -267,9 +301,17 @@ RET_VAL evalAdd(AST_NODE *oplist) {
     while(oplist != NULL) {
         num = eval(oplist);
         result.type = num.type; // wrong type
+        if (num.type == DOUBLE_TYPE) {
+            trackDouble = true;
+        }
         result.value += num.value;
         oplist = oplist->next;
     }
+
+    if (trackDouble) {
+        result.type = DOUBLE_TYPE;
+    }
+
     return result;
 }
 
@@ -667,12 +709,15 @@ RET_VAL evalSymbolNode(AST_NODE *node) {
         SYMBOL_TABLE_NODE *table = currScope->symbolTable;
         while(table != NULL) {
             if(strcmp(table->id, node->data.symbol.id) == 0) {
-                return eval(table->value);
+                RET_VAL toReturn = eval(table->value);
+                if (table->type != NO_TYPE) {
+                    toReturn.type = table->type;
+                }
+                return toReturn;
             }
             table = table->next;
         }
         if(currScope->parent == NULL) {
-            printf("parent is null");
         }
         currScope = currScope->parent;
     }
