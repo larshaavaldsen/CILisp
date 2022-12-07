@@ -71,23 +71,45 @@ typedef struct ast_function {
 
 typedef enum ast_node_type {
     NUM_NODE_TYPE,
-    FUNC_NODE_TYPE
+    FUNC_NODE_TYPE,
+    SYM_NODE_TYPE,
+    SCOPE_NODE_TYPE
 } AST_NODE_TYPE;
 
+typedef struct {
+    char* id;
+} AST_SYMBOL;
+
+typedef struct {
+    struct ast_node *child;
+} AST_SCOPE;
 
 typedef struct ast_node {
     AST_NODE_TYPE type;
+    struct ast_node *parent;
+    struct symbol_table_node *symbolTable;
     union {
         AST_NUMBER number;
         AST_FUNCTION function;
+        AST_SYMBOL symbol;
+        AST_SCOPE scope;
     } data;
     struct ast_node *next;
 } AST_NODE;
 
+typedef struct symbol_table_node {
+    char *id;
+    AST_NODE *value;
+    struct symbol_table_node *next;
+} SYMBOL_TABLE_NODE;
 
 AST_NODE *createNumberNode(double value, NUM_TYPE type);
 AST_NODE *createFunctionNode(FUNC_TYPE func, AST_NODE *opList);
 AST_NODE *addExpressionToList(AST_NODE *newExpr, AST_NODE *exprList);
+AST_NODE *createSymbolNode(char *id);
+SYMBOL_TABLE_NODE *createSymbol(char *id, AST_NODE *value);
+AST_NODE *createScopeNode(SYMBOL_TABLE_NODE *symbolTable, AST_NODE *child);
+SYMBOL_TABLE_NODE *addSymbolToTable(SYMBOL_TABLE_NODE *new, SYMBOL_TABLE_NODE *table);
 
 RET_VAL eval(AST_NODE *node);
 

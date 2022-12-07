@@ -14,6 +14,7 @@
 digit [0-9]
 double [+-]?{digit}*\.{digit}*
 int [+-]?{digit}+
+symbol [a-zA-Z$_]+[0-9]*
 func "neg"|"abs"|"add"|"sub"|"mult"|"div"|"remainder"|"exp"|"exp2"|"pow"|"log"|"sqrt"|"cbrt"|"hypot"|"max"|"min"|"custom"
 %%
 
@@ -41,6 +42,18 @@ func "neg"|"abs"|"add"|"sub"|"mult"|"div"|"remainder"|"exp"|"exp2"|"pow"|"log"|"
     llog(FUNC);
     yylval.ival = resolveFunc(yytext);
     return FUNC;
+}
+
+"let" {
+    llog(LET);
+    return LET;
+}
+
+{symbol} {
+    llog(SYMBOL);
+    yylval.sval = (char *) calloc(sizeof(char), strlen(yytext) + 1);
+    strcpy(yylval.sval, yytext);
+    return SYMBOL;
 }
 
 [(] {

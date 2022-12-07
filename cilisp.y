@@ -8,14 +8,18 @@
 %union {
     double dval;
     int ival;
+    char *sval;
     struct ast_node *astNode;
+    struct symbol_table_node *symTNode;
 };
 
 %token <ival> FUNC
 %token <dval> INT DOUBLE
-%token QUIT EOL EOFT LPAREN RPAREN
+%token <sval> SYMBOL
+%token QUIT EOL EOFT LPAREN RPAREN LET
 
 %type <astNode> s_expr number f_expr s_expr_section s_expr_list
+%type <symTNode> let_section let_elem let_list
 
 %%
 
@@ -89,7 +93,37 @@ s_expr:
         ylog(s_expr, error);
         yyerror("unexpected token");
         $$ = NULL;
+    } | SYMBOL {
+        ylog(s_expr, SYMBOL);
+        $$ = createSymbolNode($1);
+    } | LPAREN let_section s_expr RPAREN {
+        ylog(s_expr, LPAREN let_section s_expr RPAREN);
+        $$ = createScopeNode($2, $3);
+        if($$->symbolTable == NULL) {
+            printf("NULL!");
+        }
     };
+
+    let_section:
+        LPAREN LET let_list RPAREN {
+            ylog(let_section, LPAREN LET let_list RPAREN);
+            $$ = $3;
+        };
+
+    let_list:
+        let_elem {
+            ylog(let_list, let_elem);
+            $$ = $1;
+        }| let_elem let_list {
+            ylog(let_list, let_elem let_list);
+            $$ = addSymbolToTable($1, $2);
+        };
+
+    let_elem:
+        LPAREN SYMBOL s_expr RPAREN {
+            ylog(let_elem, LPAREN SYMBOL s_expr RPAREN);
+            $$ = createSymbol($2, $3);
+        };
 
 %%
 

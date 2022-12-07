@@ -49,6 +49,28 @@ void warning(char *format, ...)
     va_end (args);
 }
 
+void setParent(AST_NODE *list, AST_NODE *parent) {
+    while(list != NULL) {
+        list->parent = parent;
+        list = list->next;
+    }
+}
+
+SYMBOL_TABLE_NODE *findSymbol(char *id, SYMBOL_TABLE_NODE *symbolTable) {
+    if(id == NULL) {
+        return NULL;
+    }
+    SYMBOL_TABLE_NODE *current = symbolTable;
+
+    while (current != NULL) {
+        if(strcmp(id, symbolTable->id) == 0) {
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
 FUNC_TYPE resolveFunc(char *funcName)
 {
     // Array of string values for function names.
@@ -104,6 +126,87 @@ AST_NODE *createNumberNode(double value, NUM_TYPE type)
     return node;
 }
 
+// Creates a node with id
+AST_NODE *createSymbolNode(char *id){
+    AST_NODE *node;
+    size_t nodeSize;
+
+    nodeSize = sizeof(AST_NODE);
+    if ((node = calloc(nodeSize, 1)) == NULL)
+    {
+        yyerror("Memory allocation failed!");
+        exit(1);
+    }
+
+    node->type = SYM_NODE_TYPE;
+    node->data.symbol.id = malloc(sizeof(id) + 1);
+    strcpy(node->data.symbol.id, id);
+
+    return node;
+}
+
+AST_NODE *createScopeNode(SYMBOL_TABLE_NODE *symbolTable, AST_NODE *child){
+    AST_NODE *node;
+    size_t nodeSize;
+
+    nodeSize = sizeof(AST_NODE);
+    if ((node = calloc(nodeSize, 1)) == NULL)
+    {
+        yyerror("Memory allocation failed!");
+        exit(1);
+    }
+
+    node->type = SCOPE_NODE_TYPE;
+    node->data.scope.child = child;
+    node->symbolTable = symbolTable;
+    while(symbolTable != NULL) {
+        setParent(symbolTable->value, node);
+        symbolTable = symbolTable->next;
+    }
+    setParent(child, node);
+
+
+    return node;
+
+}
+
+SYMBOL_TABLE_NODE *createSymbol(char *id, AST_NODE *value) {
+    SYMBOL_TABLE_NODE *node;
+    size_t nodeSize;
+
+    nodeSize = sizeof(AST_NODE);
+    if ((node = calloc(nodeSize, 1)) == NULL)
+    {
+        yyerror("Memory allocation failed!");
+        exit(1);
+    }
+
+    if(id != NULL) {
+        node->id = strdup(id);
+        free(id);
+    }
+    else
+        node->id = NULL;
+    node->value = value;
+    node->next = NULL;
+
+    return node;
+}
+
+SYMBOL_TABLE_NODE *addSymbolToTable(SYMBOL_TABLE_NODE *new, SYMBOL_TABLE_NODE *table) {
+    if(new != NULL) {
+        SYMBOL_TABLE_NODE *old = findSymbol(new->id, table);
+        if(old != NULL) {
+            warning("Duplicate assignment to symbol");
+            free(new->id);
+            free(old->value);
+            old->value = new->value;
+            return table;
+        }
+        new->next = table;
+    }
+    return new;
+}
 
 AST_NODE *createFunctionNode(FUNC_TYPE func, AST_NODE *opList)
 {
@@ -123,6 +226,7 @@ AST_NODE *createFunctionNode(FUNC_TYPE func, AST_NODE *opList)
         node->data.function.opList = opList;
     }
     node->next = NULL;
+    setParent(opList, node);
     return node;
 }
 
@@ -522,6 +626,7 @@ RET_VAL evalFuncNode(AST_NODE *node)
         case HYPOT_FUNC: return evalHypot(oplist);
         case MIN_FUNC: return evalMin(oplist);
         case MAX_FUNC: return evalMax(oplist);
+        default: return NAN_RET_VAL;
     }
 
     return NAN_RET_VAL;
@@ -542,6 +647,39 @@ RET_VAL evalNumNode(AST_NODE *node)
     return result;
 }
 
+RET_VAL evalScope(AST_NODE *node) {
+    if(!node) {
+        warning("null node passed to eval scope");
+        return NAN_RET_VAL;
+    }
+    return eval((node->data.scope.child));
+}
+
+RET_VAL evalSymbolNode(AST_NODE *node) {
+    if(!node) {
+        warning("null node passed to eval scope");
+        return NAN_RET_VAL;
+    }
+
+    AST_NODE *currScope = node;
+
+    while(currScope != NULL) {
+        SYMBOL_TABLE_NODE *table = currScope->symbolTable;
+        while(table != NULL) {
+            if(strcmp(table->id, node->data.symbol.id) == 0) {
+                return eval(table->value);
+            }
+            table = table->next;
+        }
+        if(currScope->parent == NULL) {
+            printf("parent is null");
+        }
+        currScope = currScope->parent;
+    }
+    warning("undefined symbol, nan returned");
+    return NAN_RET_VAL;
+}
+
 RET_VAL eval(AST_NODE *node)
 {
     if (!node)
@@ -554,6 +692,10 @@ RET_VAL eval(AST_NODE *node)
         return evalNumNode(node);
     } else if (node->type == FUNC_NODE_TYPE) {
         return evalFuncNode(node);
+    } else if(node->type == SCOPE_NODE_TYPE) {
+        return evalScope(node);
+    } else if(node->type == SYM_NODE_TYPE) {
+        return evalSymbolNode(node);
     }
 
     return NAN_RET_VAL;
