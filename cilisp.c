@@ -366,30 +366,30 @@ RET_VAL evalSub(AST_NODE *oplist) {
 }
 
 RET_VAL evalMult(AST_NODE *oplist){
+    RET_VAL num;
     RET_VAL result;
-    result.value = 0;
+    result.value = 1;
+
+    bool trackDouble = false;
 
     if(oplist == NULL) {
         warning("mult called with no operands, 0 returned");
         return ZERO_RET_VAL;
-    } else if(oplist->next == NULL) {
-        warning("mult called with 1 operand, NAN returned");
-        return NAN_RET_VAL;
     }
 
-    RET_VAL firstOp = eval(oplist);
-    RET_VAL secondOP = eval(oplist->next);
-
-    if(oplist->next->next != NULL){
-        warning("mult called with too many operands, ignoring extra");
+    while(oplist != NULL) {
+        num = eval(oplist);
+        result.type = num.type;
+        if (num.type == DOUBLE_TYPE) {
+            trackDouble = true;
+        }
+        result.value = result.value * num.value;
+        oplist = oplist->next;
     }
 
-    if(firstOp.type == DOUBLE_TYPE || secondOP.type == DOUBLE_TYPE)
+    if (trackDouble) {
         result.type = DOUBLE_TYPE;
-    else
-        result.type = INT_TYPE;
-
-    result.value = firstOp.value * secondOP.value;
+    }
 
     return result;
 }
